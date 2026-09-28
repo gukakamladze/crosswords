@@ -138,7 +138,7 @@ details.paste summary{cursor:pointer;font-weight:600;padding:8px 0;color:var(--i
 <body>
 <div id="app"></div>
 <!-- Your puzzles live in the block below. Edit them from the admin page: add #/admin to the site address. -->
-<script type="application/json" id="app-data">{"site":{"title":"Crosswords"},"puzzles":[]}</script>
+<script type="application/json" id="app-data">{"site":{"title":"Crosswords"},"puzzles":[{"id":"pmul59gx56icc","title":"ქორწილი","updatedAt":1790593709801,"entries":[{"clue":"რა ფერის ჩოხა ეცვა სიძეს","answer":"შავი"},{"clue":"რა მანქანით იკატავეს?","answer":"მერსედესი"},{"clue":"რა ფერის იყო გამოსაცვლელი ოთახი","answer":"ფირუზი"},{"clue":"რა ფერის პიჯახი ეცვა დათოს ხელისმომკიდეს","answer":"ბეჟი"}],"layout":{"rows":9,"cols":6,"words":[{"e":3,"r":6,"c":0,"dir":"a","ans":["ბ","ე","ჟ","ი"],"n":3},{"e":2,"r":8,"c":0,"dir":"a","ans":["ფ","ი","რ","უ","ზ","ი"],"n":4},{"e":1,"r":0,"c":1,"dir":"d","ans":["მ","ე","რ","ს","ე","დ","ე","ს","ი"],"n":1},{"e":0,"r":5,"c":5,"dir":"d","ans":["შ","ა","ვ","ი"],"n":2}],"unplaced":[]}}]}</script>
 <script id="app-src">function normCh(ch){return /\p{Script=Georgian}/u.test(ch)?ch.toLowerCase():ch.toUpperCase();}
 function letters(s){return Array.from(String(s||'').normalize('NFC')).filter(ch=>/[\p{L}\p{N}]/u.test(ch)).map(normCh);}
 function buildOnce(order){
