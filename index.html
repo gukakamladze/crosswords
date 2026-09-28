@@ -1,0 +1,683 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Crosswords</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧩</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Noto+Sans+Georgian:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style id="app-style">:root{
+  --paper:#e7ebf4;--surface:#f6f8fc;--tile:#ffffff;--ink:#141c4a;--ink-2:#4b5482;--line:#141c4a;--rule:#c7cee2;
+  --lift:#b3bddb;--mark:#ffe24d;--mark-strong:#ffb914;--wrong:#c4223a;--reveal:#2c58d6;--ok:#137a4d;
+  --font:'Bricolage Grotesque','Noto Sans Georgian',system-ui,-apple-system,'Segoe UI',sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0e1230;--surface:#161b40;--tile:#1f2552;--ink:#eef0fb;--ink-2:#a7aed6;--line:#8f99e8;--rule:#2d3468;
+    --lift:#060920;--mark:#5d4e0b;--mark-strong:#9c7a0c;--wrong:#ff6b7e;--reveal:#8aa7ff;--ok:#62d6a0;color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0e1230;--surface:#161b40;--tile:#1f2552;--ink:#eef0fb;--ink-2:#a7aed6;--line:#8f99e8;--rule:#2d3468;
+  --lift:#060920;--mark:#5d4e0b;--mark-strong:#9c7a0c;--wrong:#ff6b7e;--reveal:#8aa7ff;--ok:#62d6a0;color-scheme:dark;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font);font-size:1rem;line-height:1.45;min-height:100%}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent}
+:focus-visible{outline:3px solid var(--reveal);outline-offset:2px}
+.wrap{max-width:620px;margin:0 auto;padding:16px 16px 48px}
+.bar{display:flex;align-items:center;gap:12px;min-height:48px}
+.bar .grow{flex:1;min-width:0}
+.link{background:none;border:0;padding:10px 4px;font-weight:600;color:var(--ink-2);text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.link:hover{color:var(--ink)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 18px;border-radius:10px;border:2px solid var(--ink);background:var(--ink);color:var(--paper);font-weight:600;text-decoration:none}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--rule)}
+.btn.ghost:hover{border-color:var(--ink)}
+.btn.danger{background:transparent;color:var(--wrong);border-color:transparent}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn.small{min-height:38px;padding:6px 12px;font-size:.92rem}
+h1,h2,h3{margin:0;line-height:1.1}
+.muted{color:var(--ink-2)}
+.hint{font-size:.9rem;color:var(--ink-2)}
+
+/* Home */
+.masthead{padding:28px 0 22px}
+.tiles{display:flex;flex-wrap:wrap;gap:4px;filter:drop-shadow(4px 4px 0 var(--lift))}
+.tiles span{display:grid;place-items:center;width:clamp(30px,10vw,46px);height:clamp(30px,10vw,46px);background:var(--tile);box-shadow:0 0 0 2px var(--line);font-weight:800;font-size:clamp(1.1rem,5.4vw,1.7rem);margin:2px}
+.tiles span.gap{background:transparent;box-shadow:none;width:10px}
+.site-title{font-weight:800;font-size:clamp(2rem,9vw,3.2rem);letter-spacing:-.02em}
+.plist{list-style:none;margin:8px 0 0;padding:0;border-top:2px solid var(--ink)}
+.plist li{border-bottom:1px solid var(--rule)}
+.plist a{display:flex;align-items:center;gap:14px;padding:16px 2px;color:inherit;text-decoration:none}
+.plist a:hover .pt{text-decoration:underline;text-underline-offset:3px}
+.pt{font-weight:700;font-size:1.15rem}
+.pmeta{font-size:.9rem;color:var(--ink-2)}
+.status{margin-left:auto;font-size:.85rem;font-weight:600;padding:4px 10px;border-radius:99px;border:1.5px solid var(--rule);white-space:nowrap;color:var(--ink-2)}
+.status.solved{border-color:var(--ok);color:var(--ok)}
+.status.progress{border-color:var(--mark-strong);color:var(--ink)}
+.empty{padding:40px 0;text-align:left}
+.empty p{margin:0 0 16px;font-size:1.1rem}
+
+/* Grid */
+.gridwrap{overflow-x:auto;padding:6px 8px 12px;margin:0 -8px}
+.grid{--cell:max(22px,min(46px,calc((min(100vw,620px) - 44px - var(--cols) * 2px) / var(--cols))));display:grid;grid-template-columns:repeat(var(--cols),var(--cell));grid-auto-rows:var(--cell);gap:2px;padding:2px;width:max-content;margin:0 auto;filter:drop-shadow(4px 4px 0 var(--lift));user-select:none;-webkit-user-select:none;touch-action:manipulation}
+.cell{position:relative;background:var(--tile);box-shadow:0 0 0 2px var(--line);display:grid;place-items:center;cursor:pointer}
+.cell .num{position:absolute;top:1px;left:3px;font-size:calc(var(--cell) * .27);font-weight:600;line-height:1;color:var(--ink-2)}
+.cell .ch{font-weight:700;font-size:calc(var(--cell) * .56);line-height:1;padding-top:calc(var(--cell) * .08)}
+.cell.inword{background:var(--mark)}
+.cell.cur{background:var(--mark-strong)}
+.cell.wrong .ch{color:var(--wrong)}
+.cell.wrong::after{content:"";position:absolute;right:0;top:0;border-style:solid;border-width:0 calc(var(--cell)*.28) calc(var(--cell)*.28) 0;border-color:transparent var(--wrong) transparent transparent}
+.cell.revealed .ch{color:var(--reveal)}
+.cell.good .ch{color:var(--ok)}
+.grid.done .cell{background:var(--tile)}
+.grid.static .cell{cursor:default}
+
+/* Play */
+.cluebar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;display:flex;align-items:stretch;gap:0;margin:0 -16px 12px;background:var(--surface);border-bottom:2px solid var(--ink)}
+.cluebar button.nav{width:48px;flex:none;background:none;border:0;font-size:1.35rem;font-weight:700;color:var(--ink)}
+.cluebar .ctext{flex:1;min-width:0;background:none;border:0;text-align:left;padding:10px 4px;min-height:60px;display:flex;flex-direction:column;justify-content:center}
+.cluebar .cnum{font-size:.82rem;font-weight:700;color:var(--ink-2)}
+.cluebar .cclue{font-size:1.05rem;font-weight:600;line-height:1.3}
+.timer{font-variant-numeric:tabular-nums;font-weight:600;color:var(--ink-2)}
+.tools{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:14px 0 6px}
+details.menu{position:relative}
+details.menu summary{list-style:none}
+details.menu summary::-webkit-details-marker{display:none}
+details.menu .pop{position:absolute;z-index:6;top:calc(100% + 6px);left:50%;transform:translateX(-50%);min-width:170px;background:var(--surface);border:2px solid var(--ink);border-radius:10px;padding:6px;display:flex;flex-direction:column;filter:drop-shadow(3px 3px 0 var(--lift))}
+details.menu .pop button{background:none;border:0;text-align:left;padding:10px 12px;border-radius:6px;font-weight:500}
+details.menu .pop button:hover{background:var(--paper)}
+.solved-note{margin:12px 0;padding:14px 16px;border:2px solid var(--ok);border-radius:10px;color:var(--ok);font-weight:700;font-size:1.1rem;text-align:center}
+.clues{display:grid;gap:24px;margin-top:22px}
+@media (min-width:560px){.clues{grid-template-columns:1fr 1fr}}
+.clues h3{font-size:1rem;padding-bottom:6px;border-bottom:2px solid var(--ink);margin-bottom:4px}
+.clues ol{list-style:none;margin:0;padding:0}
+.clues li button{display:flex;gap:10px;width:100%;text-align:left;background:none;border:0;padding:8px 6px;border-radius:6px;line-height:1.35}
+.clues li button b{min-width:1.6em}
+.clues li.on button{background:var(--mark)}
+.clues li.cross button{box-shadow:inset 3px 0 0 var(--mark-strong)}
+.clues li.full button{color:var(--ink-2)}
+#kb{position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;font-size:16px;border:0;padding:0;background:transparent;pointer-events:none}
+
+/* Admin */
+.section{margin-top:26px}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.field label{font-weight:600;font-size:.95rem}
+.input,textarea.input{display:block;max-width:100%;resize:vertical;width:100%;padding:11px 12px;border-radius:10px;border:2px solid var(--rule);background:var(--tile);font-size:16px}
+.input:focus{border-color:var(--ink);outline:none}
+.entries{list-style:none;margin:0;padding:0;counter-reset:e}
+.entry{padding:14px 0;border-bottom:1px solid var(--rule);display:grid;gap:8px}
+.entry .ansrow{display:flex;gap:8px;align-items:center}
+.entry .ansrow .input{flex:1;text-transform:none;font-weight:700;letter-spacing:.04em}
+.entry .count{font-size:.85rem;color:var(--ink-2);min-width:4.5em;text-align:right}
+.entry .rm{width:40px;height:40px;flex:none;border-radius:8px;border:0;background:none;color:var(--ink-2);font-size:1.1rem}
+.entry .rm:hover{color:var(--wrong)}
+.entry.nofit .ansrow .input{border-color:var(--wrong)}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.notice{padding:12px 14px;border-radius:10px;border:2px solid var(--mark-strong);background:color-mix(in srgb,var(--mark) 35%,transparent);margin:12px 0}
+.notice.err{border-color:var(--wrong);background:transparent}
+details.paste summary{cursor:pointer;font-weight:600;padding:8px 0;color:var(--ink-2)}
+.admin-list{list-style:none;padding:0;margin:0;border-top:2px solid var(--ink)}
+.admin-list li{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--rule)}
+.admin-list .grow{flex:1;min-width:0}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:12px 18px;border-radius:10px;font-weight:600;z-index:20;max-width:calc(100% - 32px)}
+@media (prefers-reduced-motion:no-preference){
+  .toast{animation:t .25s ease-out}
+  @keyframes t{from{opacity:0;transform:translate(-50%,8px)}}
+  .grid.done{animation:pop .5s ease-out}
+  @keyframes pop{50%{transform:scale(1.03)}}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<!-- Your puzzles live in the block below. Edit them from the admin page: add #/admin to the site address. -->
+<script type="application/json" id="app-data">{"site":{"title":"Crosswords"},"puzzles":[]}</script>
+<script id="app-src">function normCh(ch){return /\p{Script=Georgian}/u.test(ch)?ch.toLowerCase():ch.toUpperCase();}
+function letters(s){return Array.from(String(s||'').normalize('NFC')).filter(ch=>/[\p{L}\p{N}]/u.test(ch)).map(normCh);}
+function buildOnce(order){
+  const cells=new Map(); const key=(r,c)=>r+','+c;
+  const placed=[]; let minR=0,maxR=0,minC=0,maxC=0,cross=0;
+  function put(it,r,c,dir){
+    const dr=dir==='d'?1:0, dc=dir==='a'?1:0;
+    it.L.forEach((ch,k)=>{const kk=key(r+dr*k,c+dc*k); let cell=cells.get(kk); if(!cell){cell={ch};cells.set(kk,cell);} cell[dir]=true;});
+    placed.push({i:it.i,L:it.L,r,c,dir});
+    minR=Math.min(minR,r);minC=Math.min(minC,c);
+    maxR=Math.max(maxR,r+dr*(it.L.length-1));maxC=Math.max(maxC,c+dc*(it.L.length-1));
+  }
+  function fit(L,r,c,dir){
+    const dr=dir==='d'?1:0, dc=dir==='a'?1:0, n=L.length;
+    if(cells.has(key(r-dr,c-dc))||cells.has(key(r+dr*n,c+dc*n))) return -1;
+    let x=0;
+    for(let k=0;k<n;k++){
+      const rr=r+dr*k, cc=c+dc*k, cell=cells.get(key(rr,cc));
+      if(cell){ if(cell.ch!==L[k]||cell[dir]) return -1; x++; }
+      else if(cells.has(key(rr+dc,cc+dr))||cells.has(key(rr-dc,cc-dr))) return -1;
+    }
+    return x;
+  }
+  put(order[0],0,0,Math.random()<0.5?'a':'d');
+  let pending=order.slice(1), progress=true;
+  while(pending.length&&progress){
+    progress=false; const next=[];
+    for(const it of pending){
+      let best=null;
+      for(const [kk,cell] of cells){
+        if(cell.a&&cell.d) continue;
+        const p=kk.split(','), cr=+p[0], cc=+p[1], dir=cell.a?'d':'a';
+        for(let k=0;k<it.L.length;k++){
+          if(it.L[k]!==cell.ch) continue;
+          const r=dir==='d'?cr-k:cr, c=dir==='a'?cc-k:cc;
+          const x=fit(it.L,r,c,dir); if(x<1) continue;
+          const dr=dir==='d'?1:0, dc=dir==='a'?1:0, n=it.L.length;
+          const w=Math.max(maxC,c+dc*(n-1))-Math.min(minC,c)+1, h=Math.max(maxR,r+dr*(n-1))-Math.min(minR,r)+1;
+          const s=x*40-w*h-Math.max(0,w-h)*6+Math.random()*3;
+          if(!best||s>best.s) best={r,c,dir,s,x};
+        }
+      }
+      if(best){put(it,best.r,best.c,best.dir);cross+=best.x;progress=true;} else next.push(it);
+    }
+    pending=next;
+  }
+  return {placed,unplaced:pending,minR,maxR,minC,maxC,cross};
+}
+function generateLayout(entries,attempts){
+  const items=[]; entries.forEach((e,i)=>{const L=letters(e.answer); if(L.length>=2) items.push({i,L});});
+  if(!items.length) return null;
+  let best=null,bestScore=-Infinity;
+  for(let a=0;a<attempts;a++){
+    const order=items.map(it=>({it,k:it.L.length+(a?Math.random()*4:0)})).sort((x,y)=>y.k-x.k).map(o=>o.it);
+    const res=buildOnce(order);
+    const w=res.maxC-res.minC+1, h=res.maxR-res.minR+1;
+    const score=res.placed.length*1e6+res.cross*200-w*h*2-Math.max(0,w-h)*30-Math.max(w,h)*5;
+    if(score>bestScore){bestScore=score;best=res;}
+  }
+  const words=best.placed.map(p=>({e:p.i,r:p.r-best.minR,c:p.c-best.minC,dir:p.dir,ans:p.L}));
+  const rows=best.maxR-best.minR+1, cols=best.maxC-best.minC+1;
+  const starts=[...new Set(words.map(w=>w.r*1000+w.c))].sort((x,y)=>x-y);
+  const num=new Map(starts.map((s,i)=>[s,i+1]));
+  words.forEach(w=>{w.n=num.get(w.r*1000+w.c);});
+  words.sort((x,y)=>x.dir===y.dir?x.n-y.n:(x.dir==='a'?-1:1));
+  const noFit=items.filter(it=>!best.placed.some(p=>p.i===it.i)).map(it=>it.i);
+  entries.forEach((e,i)=>{ if(letters(e.answer).length<2 && !noFit.includes(i)) noFit.push(i); });
+  return {rows,cols,words,unplaced:noFit};
+}
+
+/* ---------- state & storage ---------- */
+var DATA = JSON.parse(document.getElementById('app-data').textContent || '{}');
+DATA.site = DATA.site || { title: 'Crosswords' };
+DATA.puzzles = DATA.puzzles || [];
+var app = document.getElementById('app');
+var WORK = null; // the admin's working copy, kept in this browser until published
+function getWork() { if (!WORK) { WORK = lsGet('work', null) || clone(DATA); WORK.site = WORK.site || { title: 'Crosswords' }; WORK.puzzles = WORK.puzzles || []; } return WORK; }
+function hasUnpublished() { var w = lsGet('work', null); return !!w && JSON.stringify(w) !== JSON.stringify(DATA); }
+
+function lsGet(k, d) { try { var v = localStorage.getItem('cw:' + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
+function lsSet(k, v) { try { localStorage.setItem('cw:' + k, JSON.stringify(v)); } catch (e) {} }
+function ssGet(k, d) { try { var v = sessionStorage.getItem('cw:' + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
+function ssSet(k, v) { try { sessionStorage.setItem('cw:' + k, JSON.stringify(v)); } catch (e) {} }
+function ssDel(k) { try { sessionStorage.removeItem('cw:' + k); } catch (e) {} }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function uid() { return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function fmtTime(s) { s = Math.floor(s || 0); var m = Math.floor(s / 60), h = Math.floor(m / 60); m = m % 60; var ss = String(s % 60).padStart(2, '0'); return h ? h + ':' + String(m).padStart(2, '0') + ':' + ss : m + ':' + ss; }
+function clone(o) { return JSON.parse(JSON.stringify(o)); }
+function findPuzzle(id, work) { var d = work ? getWork() : DATA; for (var i = 0; i < d.puzzles.length; i++) if (d.puzzles[i].id === id) return d.puzzles[i]; return null; }
+function progKey(p) { return 'prog:' + p.id + ':' + p.updatedAt; }
+
+var toastTimer;
+function toast(msg) {
+  var old = document.querySelector('.toast'); if (old) old.remove();
+  var t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg;
+  document.body.appendChild(t); clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.remove(); }, 3200);
+}
+
+/* ---------- saving: working copy in this browser, published as a new index.html ---------- */
+var HEAD_LINKS = '<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧩</text></svg>">\n' +
+  '<link rel="preconnect" href="https://fonts.googleapis.com">\n<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n' +
+  '<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Noto+Sans+Georgian:wght@400;600;700;800&display=swap" rel="stylesheet">';
+function buildDocument(data) {
+  var css = document.getElementById('app-style').textContent;
+  var js = document.getElementById('app-src').textContent;
+  var json = JSON.stringify(data).replace(/</g, '\\u003c');
+  var S = 'scr' + 'ipt';
+  return '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n' +
+    '<title>' + esc(data.site.title || 'Crosswords') + '</title>\n' + HEAD_LINKS + '\n' +
+    '<style id="app-style">' + css + '</style>\n</head>\n<body>\n<div id="app"></div>\n' +
+    '<!-- Your puzzles live in the block below. Edit them from the admin page: add #/admin to the site address. -->\n' +
+    '<' + S + ' type="application/json" id="app-data">' + json + '</' + S + '>\n' +
+    '<' + S + ' id="app-src">' + js + '</' + S + '>\n</body>\n</html>\n';
+}
+function saveData(newData, afterRoute, okMsg) {
+  WORK = newData; lsSet('work', newData);
+  if (location.hash === afterRoute) route(); else location.hash = afterRoute;
+  toast(okMsg + '. Download the site file to publish.');
+  return Promise.resolve(true);
+}
+function downloadSite() {
+  var blob = new Blob([buildDocument(getWork())], { type: 'text/html' });
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'index.html';
+  document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+
+/* ---------- router ---------- */
+var cleanup = null;
+function route() {
+  if (cleanup) { cleanup(); cleanup = null; }
+  var h = location.hash.replace(/^#\/?/, '');
+  var parts = h.split('/');
+  window.scrollTo(0, 0);
+  if (parts[0] === 'play' && parts[1]) return viewPlay(parts[1], false);
+  if (parts[0] === 'preview' && parts[1]) return viewPlay(parts[1], true);
+  if (parts[0] === 'admin') return viewAdmin();
+  if (parts[0] === 'edit') return viewEdit(parts[1] || 'new');
+  return viewHome();
+}
+window.addEventListener('hashchange', route);
+
+/* ---------- home ---------- */
+function titleTiles(t) {
+  var chars = Array.from(t);
+  if (!chars.length || chars.length > 14) return '<h1 class="site-title">' + esc(t) + '</h1>';
+  return '<h1 class="tiles" aria-label="' + esc(t) + '">' + chars.map(function (ch) {
+    return ch.trim() ? '<span aria-hidden="true">' + esc(normCh(ch)) + '</span>' : '<span class="gap" aria-hidden="true"></span>';
+  }).join('') + '</h1>';
+}
+function puzzleStatus(p) {
+  var s = lsGet(progKey(p), null);
+  if (!s) return '<span class="status">New</span>';
+  if (s.solved) return '<span class="status solved">Solved ' + fmtTime(s.elapsed) + '</span>';
+  var n = Object.keys(s.fill || {}).length;
+  return n ? '<span class="status progress">In progress</span>' : '<span class="status">New</span>';
+}
+function viewHome() {
+  document.title = DATA.site.title || 'Crosswords';
+  var list = DATA.puzzles.filter(function (p) { return p.layout && p.layout.words.length; });
+  var html = '<div class="wrap"><div class="bar"><span class="grow"></span>' +
+    (lsGet('work', null) ? '<a class="link" href="#/admin">Manage puzzles</a>' : '') + '</div>' +
+    '<header class="masthead">' + titleTiles(DATA.site.title || 'Crosswords') + '</header>';
+  if (!list.length) {
+    html += '<div class="empty"><p>No puzzles yet.</p>' + '<p class="muted">Check back soon.</p>' + '</div>';
+  } else {
+    html += '<ul class="plist">' + list.map(function (p) {
+      return '<li><a href="#/play/' + esc(p.id) + '"><div><div class="pt">' + esc(p.title) + '</div><div class="pmeta">' + p.layout.words.length + ' words</div></div>' + puzzleStatus(p) + '</a></li>';
+    }).join('') + '</ul>';
+  }
+  app.innerHTML = html + '</div>';
+}
+
+/* ---------- player ---------- */
+function makeModel(p) {
+  var L = p.layout, cells = {}, words = [];
+  L.words.forEach(function (w0, wi) {
+    var w = { n: w0.n, dir: w0.dir, r: w0.r, c: w0.c, ans: w0.ans, clue: (p.entries[w0.e] || {}).clue || '', cells: [] };
+    var dr = w.dir === 'd' ? 1 : 0, dc = w.dir === 'a' ? 1 : 0;
+    w.ans.forEach(function (ch, k) {
+      var r = w.r + dr * k, c = w.c + dc * k, key = r + ',' + c;
+      var cell = cells[key] || (cells[key] = { r: r, c: c, sol: ch });
+      cell[w.dir] = wi; w.cells.push(key);
+    });
+    cells[w.r + ',' + w.c].n = w.n;
+    words.push(w);
+  });
+  return { rows: L.rows, cols: L.cols, words: words, cells: cells };
+}
+
+function gridHTML(m, showSol, extraClass) {
+  var out = '';
+  for (var r = 0; r < m.rows; r++) for (var c = 0; c < m.cols; c++) {
+    var key = r + ',' + c, cell = m.cells[key];
+    if (!cell) { out += '<div class="void"></div>'; continue; }
+    out += '<div class="cell" data-k="' + key + '" role="gridcell">' + (cell.n ? '<span class="num">' + cell.n + '</span>' : '') +
+      '<span class="ch">' + (showSol ? esc(cell.sol) : '') + '</span></div>';
+  }
+  return '<div class="grid ' + (extraClass || '') + '" style="--cols:' + m.cols + '" role="grid">' + out + '</div>';
+}
+
+function viewPlay(id, fromWork) {
+  var p = findPuzzle(id, fromWork);
+  if (!p || !p.layout) { app.innerHTML = '<div class="wrap"><div class="bar"><a class="link" href="#/">← All puzzles</a></div><div class="empty"><p>This puzzle isn’t available.</p><a class="btn" href="#/">See all puzzles</a></div></div>'; return; }
+  document.title = p.title + ' · ' + (DATA.site.title || 'Crosswords');
+  var m = makeModel(p);
+  if (fromWork) p = Object.assign({}, p, { id: 'preview-' + p.id });
+  var saved = lsGet(progKey(p), null) || {};
+  var st = { fill: saved.fill || {}, revealed: saved.revealed || {}, wrong: {}, elapsed: saved.elapsed || 0, solved: !!saved.solved, cur: null, dir: 'a' };
+  var first = m.words[0]; st.cur = first.cells[0]; st.dir = first.dir;
+
+  var across = m.words.map(function (w, i) { return [w, i]; }).filter(function (x) { return x[0].dir === 'a'; });
+  var down = m.words.map(function (w, i) { return [w, i]; }).filter(function (x) { return x[0].dir === 'd'; });
+  function clueList(arr) { return arr.map(function (x) { return '<li data-w="' + x[1] + '"><button type="button"><b>' + x[0].n + '</b><span>' + esc(x[0].clue) + '</span></button></li>'; }).join(''); }
+
+  app.innerHTML = '<div class="wrap">' +
+    '<div class="bar"><a class="link" href="' + (fromWork ? '#/admin">← Manage puzzles' : '#/">← Puzzles') + '</a><span class="grow"></span><span class="timer" id="timer">' + fmtTime(st.elapsed) + '</span></div>' +
+    '<h2 style="font-size:1.4rem;margin:4px 0 12px">' + esc(p.title) + '</h2>' +
+    '<div class="cluebar"><button class="nav" type="button" id="prev" aria-label="Previous clue">‹</button>' +
+    '<button class="ctext" type="button" id="ctext" aria-label="Switch direction"><span class="cnum" id="cnum"></span><span class="cclue" id="cclue"></span></button>' +
+    '<button class="nav" type="button" id="next" aria-label="Next clue">›</button></div>' +
+    '<div class="gridwrap">' + gridHTML(m, false) + '</div>' +
+    '<div id="solvedNote"></div>' +
+    '<div class="tools">' +
+    '<details class="menu"><summary class="btn ghost small">Check</summary><div class="pop"><button data-act="check-cell">Check letter</button><button data-act="check-word">Check word</button><button data-act="check-all">Check puzzle</button></div></details>' +
+    '<details class="menu"><summary class="btn ghost small">Reveal</summary><div class="pop"><button data-act="rev-cell">Reveal letter</button><button data-act="rev-word">Reveal word</button><button data-act="rev-all">Reveal puzzle</button></div></details>' +
+    '<button class="btn ghost small" data-act="clear">Clear</button></div>' +
+    '<div class="clues">' + (across.length ? '<section><h3>Across</h3><ol>' + clueList(across) + '</ol></section>' : '') +
+    (down.length ? '<section><h3>Down</h3><ol>' + clueList(down) + '</ol></section>' : '') + '</div></div>';
+
+  var gridEl = app.querySelector('.grid');
+  var cellEls = {}; gridEl.querySelectorAll('.cell').forEach(function (el) { cellEls[el.dataset.k] = el; });
+  var clueEls = app.querySelectorAll('.clues li');
+  var kb = document.getElementById('kb');
+  if (!kb) { kb = document.createElement('input'); kb.id = 'kb'; kb.setAttribute('autocomplete', 'off'); kb.setAttribute('autocorrect', 'off'); kb.setAttribute('autocapitalize', 'off'); kb.setAttribute('spellcheck', 'false'); kb.setAttribute('aria-label', 'Type answer'); document.body.appendChild(kb); }
+  var SENT = '\u200B\u200B'; kb.value = SENT;
+
+  function curWordIdx() { var c = m.cells[st.cur]; return c[st.dir] != null ? c[st.dir] : c[st.dir === 'a' ? 'd' : 'a']; }
+  function persist() { lsSet(progKey(p), { fill: st.fill, revealed: st.revealed, elapsed: st.elapsed, solved: st.solved }); }
+  var persistT; function persistSoon() { clearTimeout(persistT); persistT = setTimeout(persist, 400); }
+
+  function paint() {
+    var c = m.cells[st.cur]; if (c[st.dir] == null) st.dir = st.dir === 'a' ? 'd' : 'a';
+    var wi = curWordIdx(), w = m.words[wi], inW = {}; w.cells.forEach(function (k) { inW[k] = 1; });
+    var crossWi = m.cells[st.cur][st.dir === 'a' ? 'd' : 'a'];
+    Object.keys(cellEls).forEach(function (k) {
+      var el = cellEls[k], v = st.fill[k] || '';
+      el.querySelector('.ch').textContent = v;
+      el.classList.toggle('inword', !st.solved && !!inW[k]);
+      el.classList.toggle('cur', !st.solved && k === st.cur);
+      el.classList.toggle('wrong', !!st.wrong[k]);
+      el.classList.toggle('revealed', !!st.revealed[k]);
+      el.classList.toggle('good', st.solved && !st.revealed[k]);
+      el.setAttribute('aria-selected', k === st.cur ? 'true' : 'false');
+    });
+    gridEl.classList.toggle('done', st.solved);
+    document.getElementById('cnum').textContent = w.n + ' ' + (w.dir === 'a' ? 'across' : 'down');
+    document.getElementById('cclue').textContent = w.clue;
+    clueEls.forEach(function (li) {
+      var i = +li.dataset.w, ww = m.words[i];
+      li.classList.toggle('on', i === wi);
+      li.classList.toggle('cross', i === crossWi);
+      li.classList.toggle('full', ww.cells.every(function (k) { return st.fill[k]; }));
+    });
+    document.getElementById('solvedNote').innerHTML = st.solved ? '<div class="solved-note">Solved in ' + fmtTime(st.elapsed) + '</div>' : '';
+  }
+  function focusKb() { try { kb.focus({ preventScroll: true }); kb.setSelectionRange(2, 2); } catch (e) {} }
+  function select(key, dir) { st.cur = key; if (dir) st.dir = dir; paint(); }
+  function gotoWord(i, preferEmpty) {
+    var w = m.words[i]; st.dir = w.dir;
+    var k = w.cells[0];
+    if (preferEmpty) for (var j = 0; j < w.cells.length; j++) if (!st.fill[w.cells[j]]) { k = w.cells[j]; break; }
+    select(k);
+  }
+  function stepWord(d) { var n = m.words.length, i = (curWordIdx() + d + n) % n; gotoWord(i, true); }
+  function checkSolved() {
+    var all = Object.keys(m.cells).every(function (k) { return st.fill[k] === m.cells[k].sol; });
+    if (all && !st.solved) { st.solved = true; st.wrong = {}; persist(); kb.blur(); paint(); }
+  }
+  function typeChar(ch) {
+    if (st.solved) return;
+    ch = normCh(ch);
+    if (!/[\p{L}\p{N}]/u.test(ch)) return;
+    if (st.revealed[st.cur]) { advance(); return; }
+    st.fill[st.cur] = ch; delete st.wrong[st.cur];
+    advance(); persistSoon(); checkSolved(); paint();
+  }
+  function advance() {
+    var w = m.words[curWordIdx()], idx = w.cells.indexOf(st.cur);
+    if (idx < w.cells.length - 1) { st.cur = w.cells[idx + 1]; }
+    else if (!w.cells.every(function (k) { return st.fill[k]; })) { for (var j = 0; j < w.cells.length; j++) if (!st.fill[w.cells[j]]) { st.cur = w.cells[j]; break; } }
+    else {
+      var n = m.words.length, i = curWordIdx();
+      for (var t = 1; t <= n; t++) { var ww = m.words[(i + t) % n]; if (ww.cells.some(function (k) { return !st.fill[k]; })) { gotoWord((i + t) % n, true); return; } }
+    }
+    paint();
+  }
+  function backspace() {
+    if (st.solved) return;
+    var w = m.words[curWordIdx()], idx = w.cells.indexOf(st.cur);
+    if (st.fill[st.cur] && !st.revealed[st.cur]) { delete st.fill[st.cur]; delete st.wrong[st.cur]; }
+    else if (idx > 0) { st.cur = w.cells[idx - 1]; if (!st.revealed[st.cur]) { delete st.fill[st.cur]; delete st.wrong[st.cur]; } }
+    persistSoon(); paint();
+  }
+  function moveArrow(dr, dc) {
+    var c = m.cells[st.cur], dir = dc ? 'a' : 'd';
+    if (c[dir] != null && st.dir !== dir) { st.dir = dir; paint(); return; }
+    var r = c.r + dr, cc = c.c + dc;
+    while (r >= 0 && r < m.rows && cc >= 0 && cc < m.cols) { if (m.cells[r + ',' + cc]) { select(r + ',' + cc, m.cells[r + ',' + cc][dir] != null ? dir : null); return; } r += dr; cc += dc; }
+  }
+
+  gridEl.addEventListener('click', function (e) {
+    var el = e.target.closest('.cell'); if (!el) return;
+    var k = el.dataset.k, c = m.cells[k];
+    if (k === st.cur && c.a != null && c.d != null) st.dir = st.dir === 'a' ? 'd' : 'a';
+    else if (c[st.dir] == null) st.dir = st.dir === 'a' ? 'd' : 'a';
+    select(k); focusKb();
+  });
+  document.getElementById('prev').onclick = function () { stepWord(-1); focusKb(); };
+  document.getElementById('next').onclick = function () { stepWord(1); focusKb(); };
+  document.getElementById('ctext').onclick = function () { var c = m.cells[st.cur]; if (c.a != null && c.d != null) { st.dir = st.dir === 'a' ? 'd' : 'a'; paint(); } focusKb(); };
+  app.querySelector('.clues').addEventListener('click', function (e) {
+    var li = e.target.closest('li[data-w]'); if (!li) return;
+    gotoWord(+li.dataset.w, true); focusKb();
+    var rm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    app.querySelector('.gridwrap').scrollIntoView({ block: 'center', behavior: rm ? 'auto' : 'smooth' });
+  });
+
+  kb.oninput = function () {
+    var v = kb.value;
+    if (v.length < SENT.length) backspace();
+    else Array.from(v.replace(/\u200B/g, '')).forEach(typeChar);
+    kb.value = SENT; try { kb.setSelectionRange(2, 2); } catch (e) {}
+  };
+  kb.onkeydown = function (e) {
+    var k = e.key;
+    if (k === 'ArrowLeft') { e.preventDefault(); moveArrow(0, -1); }
+    else if (k === 'ArrowRight') { e.preventDefault(); moveArrow(0, 1); }
+    else if (k === 'ArrowUp') { e.preventDefault(); moveArrow(-1, 0); }
+    else if (k === 'ArrowDown') { e.preventDefault(); moveArrow(1, 0); }
+    else if (k === 'Tab' || k === 'Enter') { e.preventDefault(); stepWord(e.shiftKey ? -1 : 1); }
+  };
+
+  function closeMenus() { app.querySelectorAll('details.menu[open]').forEach(function (d) { d.open = false; }); }
+  app.querySelector('.tools').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-act]'); if (!b) return;
+    var act = b.dataset.act; closeMenus();
+    var keys = act.endsWith('cell') ? [st.cur] : act.endsWith('word') ? m.words[curWordIdx()].cells : Object.keys(m.cells);
+    if (act.indexOf('check') === 0) {
+      var bad = 0; keys.forEach(function (k) { if (st.fill[k] && st.fill[k] !== m.cells[k].sol) { st.wrong[k] = 1; bad++; } });
+      toast(bad ? (bad === 1 ? '1 letter is wrong' : bad + ' letters are wrong') : 'No wrong letters so far');
+    } else if (act.indexOf('rev') === 0) {
+      if (act === 'rev-all' && !confirm('Reveal the whole puzzle?')) return;
+      keys.forEach(function (k) { if (st.fill[k] !== m.cells[k].sol) { st.fill[k] = m.cells[k].sol; st.revealed[k] = 1; delete st.wrong[k]; } });
+      persist(); checkSolved();
+    } else if (act === 'clear') {
+      if (!confirm('Clear all your letters and restart the timer?')) return;
+      st.fill = {}; st.revealed = {}; st.wrong = {}; st.elapsed = 0; st.solved = false; persist();
+      document.getElementById('timer').textContent = fmtTime(0);
+    }
+    paint();
+  });
+  function outside(e) { if (!e.target.closest('details.menu')) closeMenus(); }
+  document.addEventListener('click', outside);
+
+  var tick = setInterval(function () {
+    if (st.solved || document.hidden) return;
+    if (!Object.keys(st.fill).length) return;
+    st.elapsed++; document.getElementById('timer').textContent = fmtTime(st.elapsed);
+    if (st.elapsed % 5 === 0) persist();
+  }, 1000);
+
+  paint();
+  cleanup = function () { clearInterval(tick); persist(); document.removeEventListener('click', outside); kb.oninput = null; kb.onkeydown = null; kb.blur(); };
+}
+
+/* ---------- admin: list ---------- */
+function viewAdmin() {
+  document.title = 'Manage puzzles';
+  var W = getWork(), dirty = hasUnpublished();
+  var html = '<div class="wrap"><div class="bar"><a class="link" href="#/">← Puzzles</a></div>' +
+    '<h1 style="font-size:2rem;margin:12px 0 18px">Manage puzzles</h1>' +
+    (dirty ? '<div class="notice"><b>You have unpublished changes.</b> They’re saved in this browser only. Tap “Download site file” and upload the new index.html to your website.</div>'
+           : '<p class="hint">Changes you make here are saved in this browser until you publish them.</p>') +
+    '<div class="row" style="margin-bottom:18px"><a class="btn" href="#/edit/new">New puzzle</a>' +
+    '<button class="btn ghost" id="dl">Download site file</button></div>';
+  if (W.puzzles.length) {
+    html += '<ul class="admin-list">' + W.puzzles.map(function (p) {
+      return '<li><div class="grow"><div class="pt">' + esc(p.title) + '</div><div class="pmeta">' + (p.layout ? p.layout.words.length : 0) + ' of ' + p.entries.length + ' answers in grid</div></div>' +
+        '<a class="btn ghost small" href="#/preview/' + esc(p.id) + '">Try it</a><a class="btn small" href="#/edit/' + esc(p.id) + '">Edit</a></li>';
+    }).join('') + '</ul>';
+  } else html += '<p class="muted">No puzzles yet. Write your clues and answers, and the grid is built for you.</p>';
+  html += '<div class="section"><div class="field"><label for="siteTitle">Site name</label><input class="input" id="siteTitle" maxlength="60" value="' + esc(W.site.title) + '"></div>' +
+    '<button class="btn ghost" id="saveTitle">Save site name</button></div>' +
+    (dirty ? '<div class="section"><button class="btn danger" id="discard">Discard unpublished changes</button></div>' : '') + '</div>';
+  app.innerHTML = html;
+  document.getElementById('dl').onclick = downloadSite;
+  document.getElementById('saveTitle').onclick = function () {
+    var nd = clone(getWork()); nd.site.title = document.getElementById('siteTitle').value.trim() || 'Crosswords';
+    saveData(nd, '#/admin', 'Site name saved');
+  };
+  var disc = document.getElementById('discard');
+  if (disc) disc.onclick = function () {
+    if (!confirm('Discard all unpublished changes and go back to the puzzles on your website?')) return;
+    try { localStorage.removeItem('cw:work'); } catch (e) {}
+    WORK = null; route(); toast('Changes discarded');
+  };
+}
+
+/* ---------- admin: editor ---------- */
+function signature(entries) { return entries.map(function (e) { return letters(e.answer).join(''); }).join('|'); }
+function viewEdit(id) {
+  var existing = id === 'new' ? null : findPuzzle(id, true);
+  if (id !== 'new' && !existing) { location.hash = '#/admin'; return; }
+  var st;
+  var restored = false;
+  if (existing) st = { id: existing.id, title: existing.title, entries: clone(existing.entries), layout: clone(existing.layout), sig: signature(existing.entries) };
+  else { st = { id: null, title: '', entries: [], layout: null, sig: '' }; for (var i = 0; i < 5; i++) st.entries.push({ clue: '', answer: '' }); }
+
+  app.innerHTML = '<div class="wrap"><div class="bar"><a class="link" href="#/admin">← Manage puzzles</a></div>' +
+    '<h1 style="font-size:2rem;margin:12px 0 18px">' + (existing ? 'Edit puzzle' : 'New puzzle') + '</h1>' +
+    (restored ? '<div class="notice">Your last save didn’t go through. Your edits are restored; save again.</div>' : '') +
+    '<div class="field"><label for="ptitle">Puzzle title</label><input class="input" id="ptitle" maxlength="80" placeholder="e.g. Tbilisi streets"></div>' +
+    '<div class="section"><h2 style="font-size:1.25rem">Clues and answers</h2><p class="hint">Spaces and punctuation in answers are ignored. Answers need at least 2 letters.</p>' +
+    '<ul class="entries" id="entries"></ul>' +
+    '<div class="row" style="margin-top:12px"><button class="btn ghost" id="addRow">Add clue</button></div>' +
+    '<details class="paste" style="margin-top:10px"><summary>Paste a list instead</summary><p class="hint">One per line, clue and answer separated by | or a tab. Example: Capital of Georgia | Tbilisi</p>' +
+    '<textarea class="input" id="pasteBox" rows="6"></textarea><div class="row" style="margin-top:8px"><button class="btn ghost" id="pasteAdd">Add these clues</button></div></details></div>' +
+    '<div class="section"><h2 style="font-size:1.25rem;margin-bottom:10px">Grid</h2><div id="gridArea"></div>' +
+    '<div class="row" style="margin-top:14px"><button class="btn ghost" id="build">Build crossword</button></div></div>' +
+    '<div class="section row"><button class="btn" id="save">Save puzzle</button>' + (existing ? '<button class="btn danger" id="del">Delete puzzle</button>' : '') + '</div></div>';
+
+  var titleEl = document.getElementById('ptitle'); titleEl.value = st.title;
+  var list = document.getElementById('entries');
+  function stale() { return !st.layout || st.sig !== signature(st.entries); }
+  function renderRows() {
+    list.innerHTML = st.entries.map(function (e, i) {
+      return '<li class="entry" data-i="' + i + '"><textarea class="input clue" rows="2" placeholder="Clue" aria-label="Clue ' + (i + 1) + '">' + esc(e.clue) + '</textarea>' +
+        '<div class="ansrow"><input class="input ans" placeholder="Answer" aria-label="Answer ' + (i + 1) + '" value="' + esc(e.answer) + '"><span class="count"></span>' +
+        '<button class="rm" type="button" aria-label="Remove clue ' + (i + 1) + '">✕</button></div></li>';
+    }).join('');
+    updateCounts();
+  }
+  function updateCounts() {
+    var nofit = st.layout && !stale() ? st.layout.unplaced || [] : [];
+    list.querySelectorAll('.entry').forEach(function (li) {
+      var i = +li.dataset.i, n = letters(st.entries[i].answer).length;
+      li.querySelector('.count').textContent = n ? n + ' letters' : '';
+      li.classList.toggle('nofit', nofit.indexOf(i) >= 0 && n > 0);
+    });
+  }
+  function renderGrid() {
+    var area = document.getElementById('gridArea'), btn = document.getElementById('build');
+    btn.textContent = st.layout ? 'Try another layout' : 'Build crossword';
+    if (!st.layout) { area.innerHTML = '<p class="muted">Add your clues and answers, then build the grid. You can rebuild until you like the layout.</p>'; return; }
+    var fake = { layout: st.layout, entries: st.entries };
+    var html = '';
+    if (stale()) html += '<div class="notice">Answers changed since this grid was built. Build again before saving.</div>';
+    var un = (st.layout.unplaced || []).filter(function (i) { return st.entries[i] && st.entries[i].answer.trim(); });
+    if (un.length && !stale()) html += '<div class="notice err">' + (un.length === 1 ? 'This answer' : 'These answers') + ' didn’t fit: <b>' + un.map(function (i) { return esc(letters(st.entries[i].answer).join('') || st.entries[i].answer); }).join(', ') +
+      '</b>. Try another layout, or change ' + (un.length === 1 ? 'it' : 'them') + ' to share letters with other answers. Saving now leaves ' + (un.length === 1 ? 'it' : 'them') + ' out.</div>';
+    html += '<div class="gridwrap">' + gridHTML(makeModel(fake), true, 'static') + '</div><p class="hint">' + st.layout.words.length + ' words, ' + st.layout.cols + ' × ' + st.layout.rows + ' grid.</p>';
+    area.innerHTML = html; updateCounts();
+  }
+  list.addEventListener('input', function (e) {
+    var li = e.target.closest('.entry'); if (!li) return; var i = +li.dataset.i;
+    if (e.target.classList.contains('clue')) st.entries[i].clue = e.target.value;
+    else if (e.target.classList.contains('ans')) { var was = stale(); st.entries[i].answer = e.target.value; updateCounts(); if (was !== stale()) renderGrid(); }
+  });
+  list.addEventListener('click', function (e) {
+    var b = e.target.closest('.rm'); if (!b) return;
+    st.entries.splice(+b.closest('.entry').dataset.i, 1); renderRows(); renderGrid();
+  });
+  titleEl.oninput = function () { st.title = titleEl.value; };
+  document.getElementById('addRow').onclick = function () {
+    st.entries.push({ clue: '', answer: '' }); renderRows(); renderGrid();
+    var last = list.querySelector('.entry:last-child .clue'); if (last) last.focus();
+  };
+  document.getElementById('pasteAdd').onclick = function () {
+    var box = document.getElementById('pasteBox'), added = 0, skipped = 0;
+    st.entries = st.entries.filter(function (e) { return e.clue.trim() || e.answer.trim(); });
+    box.value.split(/\r?\n/).forEach(function (line) {
+      if (!line.trim()) return;
+      var m = line.split(/\t|\|/);
+      if (m.length < 2) { skipped++; return; }
+      var ans = m.pop().trim(), clue = m.join('|').trim();
+      if (!clue || !ans) { skipped++; return; }
+      st.entries.push({ clue: clue, answer: ans }); added++;
+    });
+    box.value = ''; renderRows(); renderGrid();
+    toast(added + ' clue' + (added === 1 ? '' : 's') + ' added' + (skipped ? ', ' + skipped + ' line' + (skipped === 1 ? '' : 's') + ' skipped (no | or tab)' : ''));
+  };
+  document.getElementById('build').onclick = function () {
+    st.entries = st.entries.filter(function (e) { return e.clue.trim() || e.answer.trim(); }); renderRows();
+    var usable = st.entries.filter(function (e) { return letters(e.answer).length >= 2; });
+    if (usable.length < 2) { toast('Add at least 2 answers with 2 or more letters.'); return; }
+    var missing = st.entries.filter(function (e) { return e.answer.trim() && !e.clue.trim(); }).length;
+    st.layout = generateLayout(st.entries, st.entries.length > 25 ? 150 : 350);
+    st.sig = signature(st.entries); renderGrid();
+    if (missing) toast(missing === 1 ? 'One answer has no clue yet.' : missing + ' answers have no clue yet.');
+  };
+  document.getElementById('save').onclick = function () {
+    if (!st.layout || stale()) {
+      document.getElementById('build').click();
+      if (st.layout && !stale()) toast('Grid built. Check it, then save.');
+      return;
+    }
+    var map = {}, kept = [];
+    st.entries.forEach(function (e, i) { if (e.clue.trim() || e.answer.trim()) { map[i] = kept.length; kept.push(e); } });
+    st.entries = kept;
+    st.layout.words.forEach(function (w) { w.e = map[w.e]; });
+    st.layout.unplaced = (st.layout.unplaced || []).filter(function (i) { return map[i] != null; }).map(function (i) { return map[i]; });
+    st.sig = signature(st.entries); renderRows(); renderGrid();
+    var noClue = st.layout.words.filter(function (w) { return !(st.entries[w.e].clue || '').trim(); }).length;
+    if (noClue) { toast(noClue === 1 ? 'One answer in the grid has no clue. Add it before saving.' : noClue + ' answers in the grid have no clue. Add them before saving.'); renderRows(); return; }
+    var pid = st.id || uid(), now = Date.now();
+    var puzzle = { id: pid, title: (st.title || '').trim() || 'Untitled puzzle', updatedAt: now,
+      entries: st.entries.map(function (e) { return { clue: e.clue.trim(), answer: e.answer.trim() }; }), layout: st.layout };
+    var nd = clone(getWork()), idx = -1;
+    nd.puzzles.forEach(function (p, i) { if (p.id === pid) idx = i; });
+    if (idx >= 0) nd.puzzles[idx] = puzzle; else nd.puzzles.unshift(puzzle);
+    saveData(nd, '#/admin', 'Puzzle saved');
+  };
+  var del = document.getElementById('del');
+  if (del) del.onclick = function () {
+    if (!confirm('Delete “' + existing.title + '”? Players will no longer see it.')) return;
+    var nd = clone(getWork()); nd.puzzles = nd.puzzles.filter(function (p) { return p.id !== existing.id; });
+    saveData(nd, '#/admin', 'Puzzle deleted');
+  };
+  renderRows(); renderGrid();
+}
+
+/* ---------- boot ---------- */
+(function boot() {
+  // a working copy that matches the published file has nothing left to publish
+  var w = lsGet('work', null);
+  if (w && JSON.stringify(w) === JSON.stringify(DATA)) { /* published; keep it so the admin link stays */ }
+  route();
+})();
+</script>
+</body>
+</html>
